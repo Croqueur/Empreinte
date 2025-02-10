@@ -66,7 +66,7 @@ export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({
   x: true,
   y: true
 }).extend({
-  dateOfBirth: z.string().transform((str) => new Date(str)),
+  dateOfBirth: z.string(),
   platformUsername: z.string().optional(),
 });
 

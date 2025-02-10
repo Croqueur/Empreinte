@@ -39,6 +39,10 @@ export default function FamilyTreeTab() {
 
   const form = useForm<AddMemberForm>({
     resolver: zodResolver(addMemberSchema),
+    defaultValues: {
+      name: "",
+      dateOfBirth: ""
+    }
   });
 
   // Query family members
