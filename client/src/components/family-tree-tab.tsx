@@ -53,8 +53,13 @@ export default function FamilyTreeTab() {
   });
 
   const createMemberMutation = useMutation({
-    mutationFn: async (data: InsertFamilyMember) => {
-      const res = await apiRequest("POST", "/api/family-members", data);
+    mutationFn: async (data: AddMemberForm) => {
+      const familyMember: InsertFamilyMember = {
+        ...data,
+        userId: 0, // This will be set by the server based on the authenticated user
+        dateOfBirth: new Date(data.dateOfBirth).toISOString(),
+      };
+      const res = await apiRequest("POST", "/api/family-members", familyMember);
       return res.json();
     },
     onSuccess: () => {

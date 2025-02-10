@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { insertMemorySchema, insertFamilyMemberSchema } from "@shared/schema";
+import { eq, or, ilike } from "drizzle-orm";
+import { users } from "@shared/schema";
+import { db } from "./db";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -84,14 +87,21 @@ export function registerRoutes(app: Express): Server {
     const query = req.query.q as string;
     if (!query) return res.json([]);
 
-    // Simple in-memory search implementation
-    const allUsers = Array.from(storage.users.values());
-    const results = allUsers.filter(user =>
-      user.username.toLowerCase().includes(query.toLowerCase()) ||
-      user.fullName.toLowerCase().includes(query.toLowerCase())
-    );
+    const results = await db.select({
+      id: users.id,
+      username: users.username,
+      fullName: users.fullName,
+    })
+    .from(users)
+    .where(
+      or(
+        ilike(users.username, `%${query}%`),
+        ilike(users.fullName, `%${query}%`)
+      )
+    )
+    .limit(10);
 
-    res.json(results.map(({ id, username, fullName }) => ({ id, username, fullName })));
+    res.json(results);
   });
 
   const httpServer = createServer(app);

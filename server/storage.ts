@@ -1,8 +1,11 @@
-import { InsertUser, InsertMemory, InsertFamilyMember, User, Memory, FamilyMember, FamilyRelationship, categories } from "@shared/schema";
+import { InsertUser, InsertMemory, InsertFamilyMember, User, Memory, FamilyMember, users, memories, familyMembers } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -23,114 +26,81 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private memories: Map<number, Memory>;
-  private familyMembers: Map<number, FamilyMember>;
-  private currentUserId: number;
-  private currentMemoryId: number;
-  private currentFamilyMemberId: number;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.memories = new Map();
-    this.familyMembers = new Map();
-    this.currentUserId = 1;
-    this.currentMemoryId = 1;
-    this.currentFamilyMemberId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { 
-      ...insertUser, 
-      id,
-      dateOfBirth: new Date(insertUser.dateOfBirth).toISOString()
-    };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async getMemories(userId: number): Promise<Memory[]> {
-    return Array.from(this.memories.values()).filter(
-      (memory) => memory.userId === userId,
-    );
+    return db.select().from(memories).where(eq(memories.userId, userId));
   }
 
   async getMemoriesByCategory(userId: number, categoryId: number): Promise<Memory[]> {
-    return Array.from(this.memories.values()).filter(
-      (memory) => memory.userId === userId && memory.categoryId === categoryId,
-    );
+    return db.select()
+      .from(memories)
+      .where(eq(memories.userId, userId))
+      .where(eq(memories.categoryId, categoryId));
   }
 
   async createMemory(insertMemory: InsertMemory): Promise<Memory> {
-    const id = this.currentMemoryId++;
-    const memory: Memory = {
-      ...insertMemory,
-      id,
-      createdAt: new Date(),
-      imageUrl: insertMemory.imageUrl || null,
-    };
-    this.memories.set(id, memory);
+    const [memory] = await db.insert(memories).values(insertMemory).returning();
     return memory;
   }
 
   async deleteMemory(id: number): Promise<void> {
-    this.memories.delete(id);
+    await db.delete(memories).where(eq(memories.id, id));
   }
 
   async getFamilyMembers(userId: number): Promise<FamilyMember[]> {
-    return Array.from(this.familyMembers.values()).filter(
-      (member) => member.userId === userId
-    );
+    return db.select().from(familyMembers).where(eq(familyMembers.userId, userId));
   }
 
   async getFamilyMember(id: number): Promise<FamilyMember | undefined> {
-    return this.familyMembers.get(id);
+    const [member] = await db.select().from(familyMembers).where(eq(familyMembers.id, id));
+    return member;
   }
 
   async createFamilyMember(insertMember: InsertFamilyMember): Promise<FamilyMember> {
-    const id = this.currentFamilyMemberId++;
-    const member: FamilyMember = {
+    const [member] = await db.insert(familyMembers).values({
       ...insertMember,
-      id,
-      createdAt: new Date(),
       platformUserId: null,
-      dateOfBirth: new Date(insertMember.dateOfBirth).toISOString(),
       x: 100,
       y: 100
-    };
-    this.familyMembers.set(id, member);
+    }).returning();
     return member;
   }
 
   async updateFamilyMemberPosition(id: number, x: number, y: number): Promise<void> {
-    const member = this.familyMembers.get(id);
-    if (member) {
-      this.familyMembers.set(id, { ...member, x, y });
-    }
+    await db.update(familyMembers)
+      .set({ x, y })
+      .where(eq(familyMembers.id, id));
   }
 
   async linkFamilyMemberToUser(memberId: number, platformUserId: number): Promise<void> {
-    const member = this.familyMembers.get(memberId);
-    if (member) {
-      this.familyMembers.set(memberId, { ...member, platformUserId });
-    }
+    await db.update(familyMembers)
+      .set({ platformUserId })
+      .where(eq(familyMembers.id, memberId));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
