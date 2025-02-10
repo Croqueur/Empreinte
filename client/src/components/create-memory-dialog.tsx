@@ -9,8 +9,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertMemorySchema, type InsertMemory } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { Loader2, Mic, Square } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useReactMediaRecorder } from "react-media-recorder";
 
 type CreateMemoryDialogProps = {
   categoryId: number;
@@ -25,6 +26,7 @@ export default function CreateMemoryDialog({
   open,
   onOpenChange,
 }: CreateMemoryDialogProps) {
+  const [isTyping, setIsTyping] = useState(false);
   const form = useForm<InsertMemory>({
     resolver: zodResolver(insertMemorySchema),
     defaultValues: {
@@ -34,12 +36,27 @@ export default function CreateMemoryDialog({
     },
   });
 
+  const {
+    status,
+    startRecording,
+    stopRecording,
+    mediaBlobUrl,
+  } = useReactMediaRecorder({ audio: true });
+
   // When the prompt changes, update the form's content
   useEffect(() => {
     if (promptText) {
       form.setValue("content", `Prompt: ${promptText}\n\nMy Memory:\n`);
     }
   }, [promptText, form]);
+
+  // Handle typing detection
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    form.setValue("content", value);
+    // Set typing status if content length is more than the prompt
+    setIsTyping(value.length > (promptText ? promptText.length + 15 : 0));
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertMemory) => {
@@ -50,12 +67,13 @@ export default function CreateMemoryDialog({
       queryClient.invalidateQueries({ queryKey: ["/api/memories", categoryId] });
       onOpenChange(false);
       form.reset();
+      setIsTyping(false);
     },
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Create New Memory</DialogTitle>
         </DialogHeader>
@@ -66,14 +84,51 @@ export default function CreateMemoryDialog({
               <Label htmlFor="title">Title</Label>
               <Input id="title" {...form.register("title")} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="content">Memory Details</Label>
-              <Textarea
-                id="content"
-                {...form.register("content")}
-                rows={8}
-                placeholder="Write your memory here..."
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="content">Memory Details</Label>
+                <Textarea
+                  id="content"
+                  {...form.register("content")}
+                  onChange={handleContentChange}
+                  rows={8}
+                  placeholder="Write your memory here..."
+                  className="h-[200px]"
+                />
+              </div>
+              {!isTyping && (
+                <div className="flex flex-col items-center justify-center bg-slate-50 rounded-lg p-4">
+                  {status === "recording" ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="lg"
+                      className="w-32 h-32 rounded-full"
+                      onClick={stopRecording}
+                    >
+                      <Square className="h-12 w-12" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="w-32 h-32 rounded-full"
+                      onClick={startRecording}
+                    >
+                      <Mic className="h-12 w-12" />
+                    </Button>
+                  )}
+                  <p className="mt-4 text-sm text-gray-600">
+                    {status === "recording"
+                      ? "Recording... Click to stop"
+                      : "Click to start recording"}
+                  </p>
+                  {mediaBlobUrl && (
+                    <audio className="mt-4" src={mediaBlobUrl} controls />
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="imageUrl">Image URL (optional)</Label>
