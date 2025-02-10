@@ -1,16 +1,20 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { type Memory } from "@shared/schema";
-import { Trash2 } from "lucide-react";
+import { Trash2, Heart, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useState } from "react";
 
 type MemoryCardProps = {
   memory: Memory;
+  showInteractions?: boolean;
 };
 
-export default function MemoryCard({ memory }: MemoryCardProps) {
+export default function MemoryCard({ memory, showInteractions }: MemoryCardProps) {
+  const [liked, setLiked] = useState(false);
+
   const deleteMutation = useMutation({
     mutationFn: async () => {
       await apiRequest("DELETE", `/api/memories/${memory.id}`);
@@ -44,6 +48,24 @@ export default function MemoryCard({ memory }: MemoryCardProps) {
           {memory.createdAt ? format(new Date(memory.createdAt), "PP") : ""}
         </p>
         <p className="whitespace-pre-wrap">{memory.content}</p>
+
+        {showInteractions && (
+          <div className="flex gap-4 mt-4 pt-4 border-t">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={liked ? "text-red-500" : ""}
+              onClick={() => setLiked(!liked)}
+            >
+              <Heart className="h-4 w-4 mr-2" />
+              {liked ? "Liked" : "Like"}
+            </Button>
+            <Button variant="ghost" size="sm">
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Comment
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
