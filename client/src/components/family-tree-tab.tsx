@@ -119,7 +119,7 @@ export default function FamilyTreeTab() {
         </Button>
       </div>
 
-      <div 
+      <div
         className="relative min-h-[600px] border rounded-lg p-8 bg-slate-50"
         onDragOver={(e) => e.preventDefault()}
       >
@@ -139,18 +139,23 @@ export default function FamilyTreeTab() {
           >
             <Card className="w-48">
               <CardContent className="p-4 text-center">
-                <UserCircle className="h-12 w-12 mx-auto mb-2" />
+                <UserCircle className={`h-12 w-12 mx-auto mb-2 ${member.platformUserId ? 'text-primary' : 'text-gray-400'}`} />
                 <p className="font-semibold">{member.name}</p>
                 <p className="text-sm text-gray-500">
                   {new Date(member.dateOfBirth).toLocaleDateString()}
                 </p>
                 {member.platformUserId ? (
-                  <p className="text-sm text-blue-500 mt-2">Linked to platform user</p>
+                  <div className="mt-2 p-2 bg-primary/10 rounded-md">
+                    <p className="text-sm text-primary font-medium">
+                      <Link className="h-4 w-4 inline mr-2" />
+                      Connected to platform
+                    </p>
+                  </div>
                 ) : (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mt-2"
+                    className="mt-2 w-full"
                     onClick={() => {
                       setSelectedMember(member);
                       setIsLinking(true);
@@ -166,7 +171,7 @@ export default function FamilyTreeTab() {
         ))}
 
         <svg className="absolute inset-0 pointer-events-none">
-          {familyMembers.map((member, i) => 
+          {familyMembers.map((member, i) =>
             familyMembers.slice(i + 1).map((otherMember, j) => (
               <line
                 key={`${member.id}-${otherMember.id}`}
@@ -197,16 +202,16 @@ export default function FamilyTreeTab() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                <Input 
-                  id="dateOfBirth" 
-                  type="date" 
-                  {...form.register("dateOfBirth")} 
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  {...form.register("dateOfBirth")}
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setIsAddingMember(false)}
                 >
                   Cancel
@@ -220,38 +225,57 @@ export default function FamilyTreeTab() {
 
       {/* Link to User Dialog */}
       <Dialog open={isLinking} onOpenChange={setIsLinking}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Link to Platform User</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Search for existing users to link this family member
+            </p>
           </DialogHeader>
-          <Command>
+          <Command className="rounded-lg border shadow-md">
             <CommandInput
-              placeholder="Search users..."
+              placeholder="Search by name or username..."
               value={searchValue}
               onValueChange={setSearchValue}
             />
-            <CommandGroup>
-              {searchResults.map((user) => (
-                <CommandItem
-                  key={user.id}
-                  value={user.username}
-                  onSelect={() => {
-                    if (selectedMember) {
-                      linkMemberMutation.mutate({
-                        memberId: selectedMember.id,
-                        platformUserId: user.id,
-                      });
-                    }
-                  }}
-                >
-                  <div>
-                    <p>{user.fullName}</p>
-                    <p className="text-sm text-gray-500">@{user.username}</p>
-                  </div>
-                </CommandItem>
-              ))}
+            <CommandGroup className="max-h-[300px] overflow-auto">
+              {searchResults.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground text-center">
+                  {searchValue ? "No users found" : "Start typing to search"}
+                </p>
+              ) : (
+                searchResults.map((user) => (
+                  <CommandItem
+                    key={user.id}
+                    value={user.username}
+                    onSelect={() => {
+                      if (selectedMember) {
+                        linkMemberMutation.mutate({
+                          memberId: selectedMember.id,
+                          platformUserId: user.id,
+                        });
+                      }
+                    }}
+                    className="flex items-center gap-3 p-2 cursor-pointer hover:bg-accent"
+                  >
+                    <UserCircle className="h-8 w-8 text-primary" />
+                    <div>
+                      <p className="font-medium">{user.fullName}</p>
+                      <p className="text-sm text-muted-foreground">@{user.username}</p>
+                    </div>
+                  </CommandItem>
+                ))
+              )}
             </CommandGroup>
           </Command>
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setIsLinking(false)}
+            >
+              Cancel
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
