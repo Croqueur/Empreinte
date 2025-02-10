@@ -1,112 +1,265 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, UserCircle, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, UserCircle, Search, Link } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { FamilyMember, InsertFamilyMember } from "@shared/schema";
+import { Command, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 
-type FamilyMember = {
+type Position = { x: number; y: number };
+
+const addMemberSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+});
+
+type AddMemberForm = z.infer<typeof addMemberSchema>;
+
+type PlatformUser = {
   id: number;
-  name: string;
-  relationship: string;
-  level: number; // Generation level (0 for self, 1 for parents, -1 for children)
-  position: number; // Horizontal position in the level
+  username: string;
+  fullName: string;
 };
 
 export default function FamilyTreeTab() {
-  // Mock data for now - will be replaced with API calls
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
-    { id: 1, name: "You", relationship: "Self", level: 0, position: 0 },
-    { id: 2, name: "John Doe", relationship: "Father", level: 1, position: -1 },
-    { id: 3, name: "Jane Doe", relationship: "Mother", level: 1, position: 1 },
-    { id: 4, name: "Mike Doe", relationship: "Brother", level: 0, position: 1 },
-  ]);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [draggedMember, setDraggedMember] = useState<FamilyMember | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
+  const [isLinking, setIsLinking] = useState(false);
+  const { toast } = useToast();
+
+  const form = useForm<AddMemberForm>({
+    resolver: zodResolver(addMemberSchema),
+  });
+
+  // Query family members
+  const { data: familyMembers = [] } = useQuery<FamilyMember[]>({
+    queryKey: ["/api/family-members"],
+  });
+
+  // Search platform users
+  const { data: searchResults = [] } = useQuery<PlatformUser[]>({
+    queryKey: ["/api/users/search", searchValue],
+    enabled: isLinking && searchValue.length > 0,
+  });
+
+  const createMemberMutation = useMutation({
+    mutationFn: async (data: InsertFamilyMember) => {
+      const res = await apiRequest("POST", "/api/family-members", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/family-members"] });
+      setIsAddingMember(false);
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Family member added successfully",
+      });
+    },
+  });
+
+  const linkMemberMutation = useMutation({
+    mutationFn: async ({ memberId, platformUserId }: { memberId: number; platformUserId: number }) => {
+      await apiRequest("POST", `/api/family-members/${memberId}/link`, { platformUserId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/family-members"] });
+      setIsLinking(false);
+      setSelectedMember(null);
+      toast({
+        title: "Success",
+        description: "Family member linked to platform user",
+      });
+    },
+  });
+
+  const handleDragStart = (member: FamilyMember) => {
+    setDraggedMember(member);
+    setIsDragging(true);
+  };
+
+  const handleDrag = (e: React.DragEvent, member: FamilyMember) => {
+    if (!isDragging || !draggedMember) return;
+
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setMembers(members.map(m => 
+      m.id === member.id 
+        ? { ...m, position: { x, y } }
+        : m
+    ));
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setDraggedMember(null);
+    updateRelationships();
+  };
+
+  const updateRelationships = () => {
+    const sortedMembers = [...members].sort((a, b) => a.position.y - b.position.y);
+  };
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold">My Family Tree</h2>
-        <Button variant="outline">
+        <Button onClick={() => setIsAddingMember(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Family Member
         </Button>
       </div>
 
-      <div className="relative min-h-[500px] border rounded-lg p-8 bg-slate-50">
-        {/* Parents Level */}
-        <div className="absolute top-8 left-0 right-0">
-          <div className="flex justify-center gap-16">
-            {familyMembers
-              .filter((member) => member.level === 1)
-              .map((member) => (
-                <Card key={member.id} className="w-48">
-                  <CardContent className="p-4 text-center">
-                    <UserCircle className="h-12 w-12 mx-auto mb-2" />
-                    <p className="font-semibold">{member.name}</p>
-                    <p className="text-sm text-gray-500">{member.relationship}</p>
-                  </CardContent>
-                </Card>
-              ))}
+      <div 
+        className="relative min-h-[600px] border rounded-lg p-8 bg-slate-50"
+        onDragOver={(e) => e.preventDefault()}
+      >
+        {familyMembers.map((member) => (
+          <div
+            key={member.id}
+            className="absolute"
+            style={{
+              left: member.position?.x || 100,
+              top: member.position?.y || 100,
+              cursor: 'move'
+            }}
+            draggable
+            onDragStart={() => handleDragStart(member)}
+            onDrag={(e) => handleDrag(e, member)}
+            onDragEnd={handleDragEnd}
+          >
+            <Card className="w-48">
+              <CardContent className="p-4 text-center">
+                <UserCircle className="h-12 w-12 mx-auto mb-2" />
+                <p className="font-semibold">{member.name}</p>
+                <p className="text-sm text-gray-500">
+                  {new Date(member.dateOfBirth).toLocaleDateString()}
+                </p>
+                {member.platformUserId ? (
+                  <p className="text-sm text-blue-500 mt-2">Linked to platform user</p>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => {
+                      setSelectedMember(member);
+                      setIsLinking(true);
+                    }}
+                  >
+                    <Link className="h-4 w-4 mr-2" />
+                    Link to User
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
           </div>
-        </div>
+        ))}
 
-        {/* Self Level */}
-        <div className="absolute top-48 left-0 right-0">
-          <div className="flex justify-center gap-16">
-            {familyMembers
-              .filter((member) => member.level === 0)
-              .map((member) => (
-                <Card key={member.id} className="w-48">
-                  <CardContent className="p-4 text-center">
-                    <UserCircle className="h-12 w-12 mx-auto mb-2" />
-                    <p className="font-semibold">{member.name}</p>
-                    <p className="text-sm text-gray-500">{member.relationship}</p>
-                  </CardContent>
-                </Card>
-              ))}
-          </div>
-        </div>
-
-        {/* Connection Lines */}
-        <svg
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          style={{ zIndex: 0 }}
-        >
-          {/* Vertical line from parents */}
-          <line
-            x1="50%"
-            y1="104"
-            x2="50%"
-            y2="192"
-            stroke="#94a3b8"
-            strokeWidth="2"
-          />
-          {/* Horizontal line between parents */}
-          <line
-            x1="calc(50% - 96px)"
-            y1="72"
-            x2="calc(50% + 96px)"
-            y2="72"
-            stroke="#94a3b8"
-            strokeWidth="2"
-          />
-          {/* Vertical lines to parents */}
-          <line
-            x1="calc(50% - 96px)"
-            y1="72"
-            x2="calc(50% - 96px)"
-            y2="104"
-            stroke="#94a3b8"
-            strokeWidth="2"
-          />
-          <line
-            x1="calc(50% + 96px)"
-            y1="72"
-            x2="calc(50% + 96px)"
-            y2="104"
-            stroke="#94a3b8"
-            strokeWidth="2"
-          />
+        <svg className="absolute inset-0 pointer-events-none">
+          {familyMembers.map((member, i) => 
+            familyMembers.slice(i + 1).map((otherMember, j) => (
+              <line
+                key={`${member.id}-${otherMember.id}`}
+                x1={member.position?.x + 96 || 100}
+                y1={member.position?.y || 100}
+                x2={otherMember.position?.x + 96 || 100}
+                y2={otherMember.position?.y || 100}
+                stroke="#94a3b8"
+                strokeWidth="2"
+                strokeDasharray="4"
+              />
+            ))
+          )}
         </svg>
       </div>
+
+      {/* Add Member Dialog */}
+      <Dialog open={isAddingMember} onOpenChange={setIsAddingMember}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Family Member</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit((data) => createMemberMutation.mutate(data))} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" {...form.register("name")} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                <Input 
+                  id="dateOfBirth" 
+                  type="date" 
+                  {...form.register("dateOfBirth")} 
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsAddingMember(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Add Member</Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link to User Dialog */}
+      <Dialog open={isLinking} onOpenChange={setIsLinking}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link to Platform User</DialogTitle>
+          </DialogHeader>
+          <Command>
+            <CommandInput
+              placeholder="Search users..."
+              value={searchValue}
+              onValueChange={setSearchValue}
+            />
+            <CommandGroup>
+              {searchResults.map((user) => (
+                <CommandItem
+                  key={user.id}
+                  value={user.username}
+                  onSelect={() => {
+                    if (selectedMember) {
+                      linkMemberMutation.mutate({
+                        memberId: selectedMember.id,
+                        platformUserId: user.id,
+                      });
+                    }
+                  }}
+                >
+                  <div>
+                    <p>{user.fullName}</p>
+                    <p className="text-sm text-gray-500">@{user.username}</p>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </Command>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

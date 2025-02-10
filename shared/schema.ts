@@ -10,6 +10,22 @@ export const users = pgTable("users", {
   dateOfBirth: date("date_of_birth").notNull(),
 });
 
+export const familyMembers = pgTable("family_members", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  dateOfBirth: date("date_of_birth").notNull(),
+  platformUserId: integer("platform_user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const familyRelationships = pgTable("family_relationships", {
+  id: serial("id").primaryKey(),
+  parentId: integer("parent_id").notNull().references(() => familyMembers.id),
+  childId: integer("child_id").notNull().references(() => familyMembers.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const memories = pgTable("memories", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -35,13 +51,30 @@ export const categories = [
   { id: 12, name: "Dreams and Aspirations", coverUrl: "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&w=800" }
 ];
 
+// Schema for user insertion
 export const insertUserSchema = createInsertSchema(users).extend({
   dateOfBirth: z.string().transform((str) => new Date(str)),
 });
+
+// Schema for family member insertion
+export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ 
+  id: true, 
+  createdAt: true,
+  platformUserId: true 
+}).extend({
+  dateOfBirth: z.string().transform((str) => new Date(str)),
+  platformUsername: z.string().optional(),
+});
+
+// Schema for memory insertion
 export const insertMemorySchema = createInsertSchema(memories).omit({ id: true, createdAt: true });
 
+// Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertMemory = z.infer<typeof insertMemorySchema>;
+export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
 export type User = typeof users.$inferSelect;
 export type Memory = typeof memories.$inferSelect;
+export type FamilyMember = typeof familyMembers.$inferSelect;
+export type FamilyRelationship = typeof familyRelationships.$inferSelect;
 export type Category = typeof categories[number];

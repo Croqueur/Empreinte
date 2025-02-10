@@ -1,4 +1,4 @@
-import { InsertUser, InsertMemory, User, Memory, categories } from "@shared/schema";
+import { InsertUser, InsertMemory, InsertFamilyMember, User, Memory, FamilyMember, FamilyRelationship, categories } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
@@ -8,27 +8,37 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   getMemories(userId: number): Promise<Memory[]>;
   getMemoriesByCategory(userId: number, categoryId: number): Promise<Memory[]>;
   createMemory(memory: InsertMemory): Promise<Memory>;
   deleteMemory(id: number): Promise<void>;
-  
+
+  getFamilyMembers(userId: number): Promise<FamilyMember[]>;
+  getFamilyMember(id: number): Promise<FamilyMember | undefined>;
+  createFamilyMember(member: InsertFamilyMember): Promise<FamilyMember>;
+  updateFamilyMemberPosition(id: number, x: number, y: number): Promise<void>;
+  linkFamilyMemberToUser(memberId: number, platformUserId: number): Promise<void>;
+
   sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private memories: Map<number, Memory>;
+  private familyMembers: Map<number, FamilyMember>;
   private currentUserId: number;
   private currentMemoryId: number;
+  private currentFamilyMemberId: number;
   sessionStore: session.Store;
 
   constructor() {
     this.users = new Map();
     this.memories = new Map();
+    this.familyMembers = new Map();
     this.currentUserId = 1;
     this.currentMemoryId = 1;
+    this.currentFamilyMemberId = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
@@ -46,7 +56,11 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      dateOfBirth: insertUser.dateOfBirth.toISOString() 
+    };
     this.users.set(id, user);
     return user;
   }
@@ -69,6 +83,7 @@ export class MemStorage implements IStorage {
       ...insertMemory,
       id,
       createdAt: new Date(),
+      imageUrl: insertMemory.imageUrl || null,
     };
     this.memories.set(id, memory);
     return memory;
@@ -76,6 +91,45 @@ export class MemStorage implements IStorage {
 
   async deleteMemory(id: number): Promise<void> {
     this.memories.delete(id);
+  }
+
+  async getFamilyMembers(userId: number): Promise<FamilyMember[]> {
+    return Array.from(this.familyMembers.values()).filter(
+      (member) => member.userId === userId
+    );
+  }
+
+  async getFamilyMember(id: number): Promise<FamilyMember | undefined> {
+    return this.familyMembers.get(id);
+  }
+
+  async createFamilyMember(insertMember: InsertFamilyMember): Promise<FamilyMember> {
+    const id = this.currentFamilyMemberId++;
+    const member: FamilyMember = {
+      ...insertMember,
+      id,
+      createdAt: new Date(),
+      platformUserId: null,
+      dateOfBirth: insertMember.dateOfBirth.toISOString()
+    };
+    this.familyMembers.set(id, member);
+    return member;
+  }
+
+  async updateFamilyMemberPosition(id: number, x: number, y: number): Promise<void> {
+    const member = this.familyMembers.get(id);
+    if (member) {
+      member.x = x;
+      member.y = y;
+      this.familyMembers.set(id, member);
+    }
+  }
+
+  async linkFamilyMemberToUser(memberId: number, platformUserId: number): Promise<void> {
+    const member = this.familyMembers.get(memberId);
+    if (member) {
+      this.familyMembers.set(memberId, { ...member, platformUserId });
+    }
   }
 }
 
