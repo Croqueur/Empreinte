@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, UserCircle, Search, Link } from "lucide-react";
+import { Plus, UserCircle, Link } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,8 +14,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { FamilyMember, InsertFamilyMember } from "@shared/schema";
 import { Command, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-
-type Position = { x: number; y: number };
 
 const addMemberSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -31,7 +29,6 @@ type PlatformUser = {
 };
 
 export default function FamilyTreeTab() {
-  const [members, setMembers] = useState<FamilyMember[]>([]);
   const [draggedMember, setDraggedMember] = useState<FamilyMember | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isAddingMember, setIsAddingMember] = useState(false);
@@ -86,6 +83,12 @@ export default function FamilyTreeTab() {
     },
   });
 
+  const updatePositionMutation = useMutation({
+    mutationFn: async ({ id, x, y }: { id: number; x: number; y: number }) => {
+      await apiRequest("PATCH", `/api/family-members/${id}/position`, { x, y });
+    },
+  });
+
   const handleDragStart = (member: FamilyMember) => {
     setDraggedMember(member);
     setIsDragging(true);
@@ -95,24 +98,15 @@ export default function FamilyTreeTab() {
     if (!isDragging || !draggedMember) return;
 
     const rect = (e.target as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
 
-    setMembers(members.map(m => 
-      m.id === member.id 
-        ? { ...m, position: { x, y } }
-        : m
-    ));
+    updatePositionMutation.mutate({ id: member.id, x, y });
   };
 
   const handleDragEnd = () => {
     setIsDragging(false);
     setDraggedMember(null);
-    updateRelationships();
-  };
-
-  const updateRelationships = () => {
-    const sortedMembers = [...members].sort((a, b) => a.position.y - b.position.y);
   };
 
   return (
@@ -134,8 +128,8 @@ export default function FamilyTreeTab() {
             key={member.id}
             className="absolute"
             style={{
-              left: member.position?.x || 100,
-              top: member.position?.y || 100,
+              left: member.x,
+              top: member.y,
               cursor: 'move'
             }}
             draggable
@@ -176,10 +170,10 @@ export default function FamilyTreeTab() {
             familyMembers.slice(i + 1).map((otherMember, j) => (
               <line
                 key={`${member.id}-${otherMember.id}`}
-                x1={member.position?.x + 96 || 100}
-                y1={member.position?.y || 100}
-                x2={otherMember.position?.x + 96 || 100}
-                y2={otherMember.position?.y || 100}
+                x1={member.x + 96}
+                y1={member.y}
+                x2={otherMember.x + 96}
+                y2={otherMember.y}
                 stroke="#94a3b8"
                 strokeWidth="2"
                 strokeDasharray="4"

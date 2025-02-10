@@ -59,7 +59,7 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id,
-      dateOfBirth: insertUser.dateOfBirth.toISOString() 
+      dateOfBirth: new Date(insertUser.dateOfBirth).toISOString()
     };
     this.users.set(id, user);
     return user;
@@ -110,7 +110,9 @@ export class MemStorage implements IStorage {
       id,
       createdAt: new Date(),
       platformUserId: null,
-      dateOfBirth: insertMember.dateOfBirth.toISOString()
+      dateOfBirth: new Date(insertMember.dateOfBirth).toISOString(),
+      x: 100,
+      y: 100
     };
     this.familyMembers.set(id, member);
     return member;
@@ -119,9 +121,7 @@ export class MemStorage implements IStorage {
   async updateFamilyMemberPosition(id: number, x: number, y: number): Promise<void> {
     const member = this.familyMembers.get(id);
     if (member) {
-      member.x = x;
-      member.y = y;
-      this.familyMembers.set(id, member);
+      this.familyMembers.set(id, { ...member, x, y });
     }
   }
 

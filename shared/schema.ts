@@ -17,6 +17,8 @@ export const familyMembers = pgTable("family_members", {
   dateOfBirth: date("date_of_birth").notNull(),
   platformUserId: integer("platform_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+  x: integer("x").notNull().default(100),
+  y: integer("y").notNull().default(100),
 });
 
 export const familyRelationships = pgTable("family_relationships", {
@@ -60,7 +62,9 @@ export const insertUserSchema = createInsertSchema(users).extend({
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ 
   id: true, 
   createdAt: true,
-  platformUserId: true 
+  platformUserId: true,
+  x: true,
+  y: true
 }).extend({
   dateOfBirth: z.string().transform((str) => new Date(str)),
   platformUsername: z.string().optional(),
