@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -6,6 +6,8 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  fullName: text("full_name").notNull(),
+  dateOfBirth: date("date_of_birth").notNull(),
 });
 
 export const memories = pgTable("memories", {
@@ -33,7 +35,9 @@ export const categories = [
   { id: 12, name: "Dreams and Aspirations", coverUrl: "https://images.unsplash.com/photo-1705579296593-2194f6ad7883" }
 ];
 
-export const insertUserSchema = createInsertSchema(users);
+export const insertUserSchema = createInsertSchema(users).extend({
+  dateOfBirth: z.string().transform((str) => new Date(str)),
+});
 export const insertMemorySchema = createInsertSchema(memories).omit({ id: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
