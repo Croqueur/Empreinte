@@ -1,25 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useRoute } from "wouter";
 import { categories, type Memory } from "@shared/schema";
 import MemoryCard from "@/components/memory-card";
 import { memoryPrompts } from "@/lib/memory-prompts";
 import MemoryPrompts from "@/components/memory-prompts";
 
 export default function MemoryPage() {
-  const params = useParams<{ id: string }>();
-  const categoryId = params.id ? parseInt(params.id) : 0;
+  const [, params] = useRoute<{ id: string }>("/category/:id");
+  const categoryId = params?.id ? parseInt(params.id) : 0;
   const category = categories.find(c => c.id === categoryId);
-
-  console.log('Memory Page Params:', params);
-  console.log('Category ID:', categoryId);
-  console.log('Found Category:', category);
 
   const { data: memories = [] } = useQuery<Memory[]>({
     queryKey: ["/api/memories", categoryId],
   });
 
   if (!category) {
-    console.log('No category found');
     return <div>Category not found</div>;
   }
 
