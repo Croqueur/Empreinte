@@ -28,9 +28,19 @@ export default function MemoryCard({ memory, showInteractions }: MemoryCardProps
     <Card>
       {memory.imageUrl && (
         <div
-          className="h-48 bg-cover bg-center rounded-t-lg"
-          style={{ backgroundImage: `url(${memory.imageUrl})` }}
-        />
+          className="relative h-48 bg-slate-100"
+        >
+          <img
+            src={memory.imageUrl}
+            alt={memory.title}
+            className="h-full w-full object-cover rounded-t-lg"
+            loading="lazy"
+            onError={(e) => {
+              // Handle broken images
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
       )}
       <CardHeader className="flex flex-row justify-between items-start">
         <h3 className="font-semibold text-lg">{memory.title}</h3>

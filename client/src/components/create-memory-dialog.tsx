@@ -28,6 +28,7 @@ export default function CreateMemoryDialog({
 }: CreateMemoryDialogProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false); // Added state for processing
 
   const form = useForm<InsertMemory>({
     resolver: zodResolver(insertMemorySchema),
@@ -60,16 +61,56 @@ export default function CreateMemoryDialog({
     setIsTyping(value.length > (promptText ? promptText.length + 15 : 0));
   };
 
-  // Handle image upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Add image compression utility
+  const compressImage = async (base64String: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!;
+
+        // Calculate new dimensions (max 800px width/height)
+        let width = img.width;
+        let height = img.height;
+        const maxSize = 800;
+
+        if (width > height && width > maxSize) {
+          height = (height * maxSize) / width;
+          width = maxSize;
+        } else if (height > maxSize) {
+          width = (width * maxSize) / height;
+          height = maxSize;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compress to JPEG with 70% quality
+      };
+      img.src = base64String;
+    });
+  };
+
+  // Update the handleImageUpload function
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
-        form.setValue("imageUrl", reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setIsProcessing(true); // Add this state variable
+      try {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const compressedImage = await compressImage(reader.result as string);
+          setSelectedImage(compressedImage);
+          form.setValue("imageUrl", compressedImage);
+          setIsProcessing(false);
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Error processing image:', error);
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -84,6 +125,7 @@ export default function CreateMemoryDialog({
       form.reset();
       setIsTyping(false);
       setSelectedImage(null);
+      setIsProcessing(false); //Added to reset processing state.
     },
   });
 
@@ -167,11 +209,18 @@ export default function CreateMemoryDialog({
                 </Label>
                 {selectedImage && (
                   <div className="mt-4 max-w-xs">
-                    <img
-                      src={selectedImage}
-                      alt="Memory preview"
-                      className="rounded-lg"
-                    />
+                    {isProcessing ? (
+                      <div className="flex items-center justify-center h-32">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    ) : (
+                      <img
+                        src={selectedImage}
+                        alt="Memory preview"
+                        className="rounded-lg"
+                        loading="lazy"
+                      />
+                    )}
                   </div>
                 )}
               </div>
