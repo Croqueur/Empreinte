@@ -110,7 +110,7 @@ export class MemStorage implements IStorage {
       id,
       createdAt: new Date(),
       platformUserId: null,
-      dateOfBirth: insertMember.dateOfBirth,
+      dateOfBirth: new Date(insertMember.dateOfBirth).toISOString(),
       x: 100,
       y: 100
     };

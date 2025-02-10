@@ -39,10 +39,6 @@ export default function FamilyTreeTab() {
 
   const form = useForm<AddMemberForm>({
     resolver: zodResolver(addMemberSchema),
-    defaultValues: {
-      name: "",
-      dateOfBirth: ""
-    }
   });
 
   // Query family members
@@ -57,13 +53,8 @@ export default function FamilyTreeTab() {
   });
 
   const createMemberMutation = useMutation({
-    mutationFn: async (data: AddMemberForm) => {
-      // Transform the data to match the expected format
-      const memberData: Omit<InsertFamilyMember, 'userId'> = {
-        name: data.name,
-        dateOfBirth: data.dateOfBirth,
-      };
-      const res = await apiRequest("POST", "/api/family-members", memberData);
+    mutationFn: async (data: InsertFamilyMember) => {
+      const res = await apiRequest("POST", "/api/family-members", data);
       return res.json();
     },
     onSuccess: () => {
@@ -73,13 +64,6 @@ export default function FamilyTreeTab() {
       toast({
         title: "Success",
         description: "Family member added successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to add family member",
-        variant: "destructive",
       });
     },
   });
