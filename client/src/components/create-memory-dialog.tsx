@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertMemorySchema, type InsertMemory } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Mic, Square } from "lucide-react";
+import { Loader2, Mic, Square, ImagePlus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useReactMediaRecorder } from "react-media-recorder";
 
@@ -27,6 +27,8 @@ export default function CreateMemoryDialog({
   onOpenChange,
 }: CreateMemoryDialogProps) {
   const [isTyping, setIsTyping] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   const form = useForm<InsertMemory>({
     resolver: zodResolver(insertMemorySchema),
     defaultValues: {
@@ -58,6 +60,19 @@ export default function CreateMemoryDialog({
     setIsTyping(value.length > (promptText ? promptText.length + 15 : 0));
   };
 
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+        form.setValue("imageUrl", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: InsertMemory) => {
       const res = await apiRequest("POST", "/api/memories", data);
@@ -68,6 +83,7 @@ export default function CreateMemoryDialog({
       onOpenChange(false);
       form.reset();
       setIsTyping(false);
+      setSelectedImage(null);
     },
   });
 
@@ -131,8 +147,34 @@ export default function CreateMemoryDialog({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL (optional)</Label>
-              <Input id="imageUrl" {...form.register("imageUrl")} />
+              <Label htmlFor="image">Memory Image</Label>
+              <div className="flex flex-col items-center p-4 border-2 border-dashed rounded-lg hover:bg-slate-50 transition-colors">
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+                <Label
+                  htmlFor="image"
+                  className="flex flex-col items-center cursor-pointer"
+                >
+                  <ImagePlus className="h-12 w-12 text-gray-400" />
+                  <span className="mt-2 text-sm text-gray-600">
+                    Click to upload an image
+                  </span>
+                </Label>
+                {selectedImage && (
+                  <div className="mt-4 max-w-xs">
+                    <img
+                      src={selectedImage}
+                      alt="Memory preview"
+                      className="rounded-lg"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
