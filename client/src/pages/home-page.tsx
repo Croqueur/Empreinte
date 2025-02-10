@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileTab from "@/components/profile-tab";
 import FeedTab from "@/components/feed-tab";
+import CloseOnesTab from "@/components/close-ones-tab";
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -25,15 +26,19 @@ export default function HomePage() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-md grid-cols-3">
             <TabsTrigger value="profile">My Profile</TabsTrigger>
             <TabsTrigger value="feed">My Feed</TabsTrigger>
+            <TabsTrigger value="connections">My Close Ones</TabsTrigger>
           </TabsList>
           <TabsContent value="profile">
             <ProfileTab />
           </TabsContent>
           <TabsContent value="feed">
             <FeedTab />
+          </TabsContent>
+          <TabsContent value="connections">
+            <CloseOnesTab />
           </TabsContent>
         </Tabs>
       </main>
