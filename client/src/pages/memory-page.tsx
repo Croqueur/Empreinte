@@ -1,17 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { categories, type Memory } from "@shared/schema";
-import { Button } from "@/components/ui/button";
 import MemoryCard from "@/components/memory-card";
-import CreateMemoryDialog from "@/components/create-memory-dialog";
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import { memoryPrompts } from "@/lib/memory-prompts";
+import MemoryPrompts from "@/components/memory-prompts";
 
 export default function MemoryPage() {
   const { id } = useParams();
-  const categoryId = parseInt(id);
+  const categoryId = parseInt(id || "0");
   const category = categories.find(c => c.id === categoryId);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const { data: memories = [] } = useQuery<Memory[]>({
     queryKey: ["/api/memories", categoryId],
@@ -19,13 +16,16 @@ export default function MemoryPage() {
 
   if (!category) return null;
 
+  const questions = memoryPrompts[categoryId] || [];
+
   return (
     <div className="min-h-screen bg-background">
       <div 
-        className="h-64 bg-cover bg-center flex items-center"
+        className="h-64 bg-cover bg-center flex items-center relative"
         style={{ backgroundImage: `url(${category.coverUrl})` }}
       >
-        <div className="container mx-auto px-4">
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="container mx-auto px-4 relative">
           <h1 className="text-4xl font-bold text-white drop-shadow-lg">
             {category.name}
           </h1>
@@ -33,25 +33,21 @@ export default function MemoryPage() {
       </div>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-semibold">Your Memories</h2>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Memory
-          </Button>
+        <div className="mb-12">
+          <h2 className="text-2xl font-semibold mb-6">Memory Prompts</h2>
+          <MemoryPrompts categoryId={categoryId} questions={questions} />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {memories.map((memory) => (
-            <MemoryCard key={memory.id} memory={memory} />
-          ))}
-        </div>
-
-        <CreateMemoryDialog
-          category={category}
-          open={isCreateOpen}
-          onOpenChange={setIsCreateOpen}
-        />
+        {memories.length > 0 && (
+          <div>
+            <h2 className="text-2xl font-semibold mb-6">Your Memories</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {memories.map((memory) => (
+                <MemoryCard key={memory.id} memory={memory} />
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

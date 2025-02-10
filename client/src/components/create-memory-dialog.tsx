@@ -6,28 +6,40 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertMemorySchema, type Category, type InsertMemory } from "@shared/schema";
+import { insertMemorySchema, type InsertMemory } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 
 type CreateMemoryDialogProps = {
-  category: Category;
+  categoryId: number;
+  promptText: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 export default function CreateMemoryDialog({
-  category,
+  categoryId,
+  promptText,
   open,
   onOpenChange,
 }: CreateMemoryDialogProps) {
   const form = useForm<InsertMemory>({
     resolver: zodResolver(insertMemorySchema),
     defaultValues: {
-      categoryId: category.id,
+      categoryId,
+      title: "",
+      content: "",
     },
   });
+
+  // When the prompt changes, update the form's content
+  useEffect(() => {
+    if (promptText) {
+      form.setValue("content", `Prompt: ${promptText}\n\nMy Memory:\n`);
+    }
+  }, [promptText, form]);
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertMemory) => {
@@ -35,7 +47,7 @@ export default function CreateMemoryDialog({
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/memories", category.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/memories", categoryId] });
       onOpenChange(false);
       form.reset();
     },
@@ -59,7 +71,7 @@ export default function CreateMemoryDialog({
               <Textarea
                 id="content"
                 {...form.register("content")}
-                rows={6}
+                rows={8}
                 placeholder="Write your memory here..."
               />
             </div>
