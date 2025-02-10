@@ -41,7 +41,7 @@ export default function MemoryCard({ memory }: MemoryCardProps) {
       </CardHeader>
       <CardContent>
         <p className="text-sm text-gray-600 mb-2">
-          {format(new Date(memory.createdAt), "PP")}
+          {memory.createdAt ? format(new Date(memory.createdAt), "PP") : ""}
         </p>
         <p className="whitespace-pre-wrap">{memory.content}</p>
       </CardContent>
