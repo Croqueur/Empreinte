@@ -10,13 +10,16 @@ import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
+import { useLanguage } from "@/hooks/use-language"; // Assumed import
+
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
 
   if (user) {
-    setLocation("/");
+    setLocation("/home");
     return null;
   }
 
@@ -25,16 +28,16 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center">
         <Card className="w-[400px]">
           <CardHeader>
-            <CardTitle>Welcome to Memento</CardTitle>
+            <CardTitle>{t("welcome")}</CardTitle>
             <CardDescription>
-              Preserve and share your life's most precious memories
+              {t("description")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
+                <TabsTrigger value="login">{t("login")}</TabsTrigger>
+                <TabsTrigger value="register">{t("register")}</TabsTrigger>
               </TabsList>
               <TabsContent value="login">
                 <LoginForm />
@@ -60,6 +63,7 @@ export default function AuthPage() {
 
 function LoginForm() {
   const { loginMutation } = useAuth();
+  const { t } = useLanguage();
   const form = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema.pick({ username: true, password: true })),
   });
@@ -68,25 +72,25 @@ function LoginForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="username">Username</Label>
+          <Label htmlFor="username">{t("username")}</Label>
           <Input id="username" {...form.register("username")} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("password")}</Label>
           <Input id="password" type="password" {...form.register("password")} />
         </div>
         <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
           {loginMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Login
+          {t("login")}
         </Button>
         <p className="text-sm text-center text-muted-foreground mt-4">
-          Don't have an account?{" "}
+          {t("noAccount")}{" "}
           <button
             type="button"
             onClick={() => document.querySelector('[data-value="register"]')?.click()}
             className="text-primary hover:underline font-medium"
           >
-            Register here
+            {t("registerHere")}
           </button>
         </p>
       </form>
@@ -96,6 +100,7 @@ function LoginForm() {
 
 function RegisterForm() {
   const { registerMutation } = useAuth();
+  const { t } = useLanguage();
   const form = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
   });
@@ -104,24 +109,24 @@ function RegisterForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit((data) => registerMutation.mutate(data))} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="username">Username</Label>
+          <Label htmlFor="username">{t("username")}</Label>
           <Input id="username" {...form.register("username")} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="fullName">Full Name</Label>
+          <Label htmlFor="fullName">{t("fullName")}</Label>
           <Input id="fullName" {...form.register("fullName")} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="dateOfBirth">Date of Birth</Label>
+          <Label htmlFor="dateOfBirth">{t("dateOfBirth")}</Label>
           <Input id="dateOfBirth" type="date" {...form.register("dateOfBirth")} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("password")}</Label>
           <Input id="password" type="password" {...form.register("password")} />
         </div>
         <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
           {registerMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Register
+          {t("register")}
         </Button>
       </form>
     </Form>
