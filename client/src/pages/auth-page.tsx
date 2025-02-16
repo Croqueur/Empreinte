@@ -10,8 +10,7 @@ import { insertUserSchema, type InsertUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
-import { useLanguage } from "@/hooks/use-language"; // Assumed import
-
+import { useLanguage } from "@/hooks/use-language";
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
@@ -19,7 +18,7 @@ export default function AuthPage() {
   const [, setLocation] = useLocation();
 
   if (user) {
-    setLocation("/home");
+    setLocation("/");
     return null;
   }
 
