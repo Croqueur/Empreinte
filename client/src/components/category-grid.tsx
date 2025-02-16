@@ -38,7 +38,10 @@ export default function CategoryGrid() {
               <CardContent className="p-4">
                 <h3 className="font-semibold text-lg mb-4">{category.name}</h3>
                 <div className="space-y-2">
-                  <Progress value={progressPercentage} className="h-2" />
+                  <div className="flex items-center gap-2">
+                    <Progress value={progressPercentage} className="h-2 flex-grow" />
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">{progressPercentage}%</span>
+                  </div>
                   <p className="text-sm text-muted-foreground text-center">
                     {progress ? (
                       <span>{progress.answered} Moments out of {progress.total} filled</span>
