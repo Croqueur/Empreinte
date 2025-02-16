@@ -79,6 +79,16 @@ function LoginForm() {
           {loginMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Login
         </Button>
+        <p className="text-sm text-center text-muted-foreground mt-4">
+          Don't have an account?{" "}
+          <button
+            type="button"
+            onClick={() => document.querySelector('[data-value="register"]')?.click()}
+            className="text-primary hover:underline font-medium"
+          >
+            Register here
+          </button>
+        </p>
       </form>
     </Form>
   );
