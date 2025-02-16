@@ -35,12 +35,20 @@ export default function CategoryGrid() {
                 className="h-48 bg-cover bg-center rounded-t-lg"
                 style={{ backgroundImage: `url(${category.coverUrl})` }}
               />
-              <CardContent className="p-4 space-y-3">
-                <h3 className="font-semibold text-lg">{category.name}</h3>
-                <div className="space-y-1">
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-lg mb-4">{category.name}</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm text-muted-foreground">
+                    <span>Progress</span>
+                    <span>{progressPercentage}%</span>
+                  </div>
                   <Progress value={progressPercentage} className="h-2" />
-                  <p className="text-sm text-muted-foreground">
-                    {progress ? `${progress.answered}/${progress.total} prompts answered` : 'Loading...'}
+                  <p className="text-sm text-muted-foreground text-center">
+                    {progress ? (
+                      <span>{progress.answered}/{progress.total} moments recorded</span>
+                    ) : (
+                      <span className="text-gray-400">Loading progress...</span>
+                    )}
                   </p>
                 </div>
               </CardContent>
