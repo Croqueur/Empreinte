@@ -24,7 +24,7 @@ export default function CategoryGrid() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {categories.map((category, index) => {
         const progress = categoryProgressQueries[index].data;
-        const progressPercentage = progress 
+        const progressPercentage = progress && progress.total > 0 
           ? Math.round((progress.answered / progress.total) * 100)
           : 0;
 
@@ -38,16 +38,12 @@ export default function CategoryGrid() {
               <CardContent className="p-4">
                 <h3 className="font-semibold text-lg mb-4">{category.name}</h3>
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center text-sm text-muted-foreground">
-                    <span>Progress</span>
-                    <span>{progressPercentage}%</span>
-                  </div>
                   <Progress value={progressPercentage} className="h-2" />
                   <p className="text-sm text-muted-foreground text-center">
                     {progress ? (
-                      <span>{progress.answered}/{progress.total} moments recorded</span>
+                      <span>{progress.answered} Moments out of {progress.total} filled</span>
                     ) : (
-                      <span className="text-gray-400">Loading progress...</span>
+                      <span className="text-gray-400">Loading...</span>
                     )}
                   </p>
                 </div>
