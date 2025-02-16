@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
+import { answeredPrompts, type AnsweredPrompt } from "@shared/schema";
+import { sql } from "drizzle-orm";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -24,6 +26,8 @@ export interface IStorage {
   linkFamilyMemberToUser(memberId: number, platformUserId: number): Promise<void>;
 
   sessionStore: session.Store;
+  getAnsweredPromptCount(userId: number, categoryId: number): Promise<number>;
+  getTotalPromptsPerCategory(categoryId: number): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -100,6 +104,20 @@ export class DatabaseStorage implements IStorage {
     await db.update(familyMembers)
       .set({ platformUserId })
       .where(eq(familyMembers.id, memberId));
+  }
+
+  async getAnsweredPromptCount(userId: number, categoryId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(answeredPrompts)
+      .where(sql`${answeredPrompts.userId} = ${userId} AND ${answeredPrompts.categoryId} = ${categoryId}`);
+
+    return result.count;
+  }
+
+  async getTotalPromptsPerCategory(categoryId: number): Promise<number> {
+    const promptsData = require("../client/src/lib/memory-prompts").memoryPrompts;
+    return promptsData[categoryId]?.length || 0;
   }
 }
 

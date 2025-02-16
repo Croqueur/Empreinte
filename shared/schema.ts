@@ -53,12 +53,19 @@ export const categories = [
   { id: 12, name: "Dreams and Aspirations", coverUrl: "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&w=800" }
 ];
 
-// Schema for user insertion
+export const answeredPrompts = pgTable("answered_prompts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  categoryId: integer("category_id").notNull(),
+  promptId: integer("prompt_id").notNull(),
+  answer: text("answer").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).extend({
   dateOfBirth: z.string().transform((str) => new Date(str)),
 });
 
-// Schema for family member insertion
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ 
   id: true, 
   createdAt: true,
@@ -70,10 +77,13 @@ export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({
   platformUsername: z.string().optional(),
 });
 
-// Schema for memory insertion
 export const insertMemorySchema = createInsertSchema(memories).omit({ id: true, createdAt: true });
 
-// Types
+export const insertAnsweredPromptSchema = createInsertSchema(answeredPrompts).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertMemory = z.infer<typeof insertMemorySchema>;
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
@@ -82,3 +92,5 @@ export type Memory = typeof memories.$inferSelect;
 export type FamilyMember = typeof familyMembers.$inferSelect;
 export type FamilyRelationship = typeof familyRelationships.$inferSelect;
 export type Category = typeof categories[number];
+export type InsertAnsweredPrompt = z.infer<typeof insertAnsweredPromptSchema>;
+export type AnsweredPrompt = typeof answeredPrompts.$inferSelect;

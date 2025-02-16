@@ -147,19 +147,39 @@ export function registerRoutes(app: Express): Server {
         username: users.username,
         fullName: users.fullName,
       })
-      .from(users)
-      .where(
-        or(
-          ilike(users.username, `%${query}%`),
-          ilike(users.fullName, `%${query}%`)
+        .from(users)
+        .where(
+          or(
+            ilike(users.username, `%${query}%`),
+            ilike(users.fullName, `%${query}%`)
+          )
         )
-      )
-      .limit(10);
+        .limit(10);
 
       res.json(results);
     } catch (error) {
       console.error('Error searching users:', error);
       res.status(500).json({ error: "Failed to search users" });
+    }
+  });
+
+  // Add new route for getting category progress
+  app.get("/api/categories/:id/progress", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const categoryId = parseInt(req.params.id);
+      if (isNaN(categoryId)) {
+        return res.status(400).json({ error: "Invalid category ID" });
+      }
+
+      const answeredCount = await storage.getAnsweredPromptCount(req.user.id, categoryId);
+      const totalPrompts = await storage.getTotalPromptsPerCategory(categoryId);
+
+      res.json({ answered: answeredCount, total: totalPrompts });
+    } catch (error) {
+      console.error('Error fetching category progress:', error);
+      res.status(500).json({ error: "Failed to fetch category progress" });
     }
   });
 
