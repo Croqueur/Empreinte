@@ -163,7 +163,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add new route for getting category progress
+  // Update the progress endpoint to use clearer naming
   app.get("/api/categories/:id/progress", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
@@ -173,10 +173,13 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid category ID" });
       }
 
-      const answeredCount = await storage.getAnsweredPromptCount(req.user.id, categoryId);
-      const totalPrompts = await storage.getTotalPromptsPerCategory(categoryId);
+      const memoriesCount = await storage.getAnsweredPromptCount(req.user.id, categoryId);
+      const totalPossibleMemories = await storage.getTotalPromptsPerCategory(categoryId);
 
-      res.json({ answered: answeredCount, total: totalPrompts });
+      res.json({ 
+        answered: memoriesCount, 
+        total: totalPossibleMemories 
+      });
     } catch (error) {
       console.error('Error fetching category progress:', error);
       res.status(500).json({ error: "Failed to fetch category progress" });
