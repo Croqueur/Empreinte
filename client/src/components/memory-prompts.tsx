@@ -13,6 +13,21 @@ export default function MemoryPrompts({ categoryId, questions }: MemoryPromptsPr
   const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
+  // Function to generate a title from the prompt
+  const generateTitleFromPrompt = (prompt: string): string => {
+    // Remove question marks and "what is/are" phrases
+    const cleanPrompt = prompt
+      .replace(/\?/g, '')
+      .replace(/what (is|are) (your|the) /i, '')
+      .trim();
+
+    // Capitalize first letter of each word
+    return cleanPrompt
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {questions.map((question, index) => (
@@ -38,6 +53,7 @@ export default function MemoryPrompts({ categoryId, questions }: MemoryPromptsPr
         onOpenChange={setIsCreateOpen}
         categoryId={categoryId}
         promptText={selectedPrompt}
+        suggestedTitle={selectedPrompt ? generateTitleFromPrompt(selectedPrompt) : undefined}
       />
     </div>
   );
